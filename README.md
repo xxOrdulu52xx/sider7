@@ -14,3 +14,8 @@ Start cmd.exe, then switch to source directory, then:
     setenv.cmd
     nmake
 
+# Credits
+
+Main dev Juce and the Contributors on the Main Sider7 GitHub Page ( Orange-Juce & Mohamedamrnady & xxOrdulu52xx)
+
+Daemon for added custom Optimized Code for UML Broadcast-Server 

@@ -3679,6 +3679,35 @@ void sider_switch_overlay_to_next_module()
     }
 }
 
+void switch_overlay_to_broadcast_server()
+{
+    for (auto it = _modules.begin(); it != _modules.end(); it++) {
+        module_t *m = *it;
+
+        if (m->evt_overlay_on && m->filename) {
+            std::wstring name = *(m->filename);
+
+            if (name.find(L"UML_BroadcastServer.lua") != std::wstring::npos) {
+
+                // hide current
+                if (_curr_overlay_m != _modules.end()) {
+                    module_hide(*_curr_overlay_m);
+                }
+
+                log_(L"Switching overlay to UML_BroadcastServer\n");
+
+                _curr_overlay_m = it;
+                module_show(*_curr_overlay_m);
+
+                _overlay_image.to_clear = true;
+                return;
+            }
+        }
+    }
+
+    log_(L"UML_BroadcastServer module not found!\n");
+}
+
 void clear_overlay_texture() {
     SAFE_RELEASE(g_texture);
     SAFE_RELEASE(g_textureView);
@@ -3799,6 +3828,7 @@ DWORD direct_input_poll(void *param) {
                         BYTE b2 = *(BYTE*)((BYTE*)&state + _gamepad_config->_overlay_toggle_2);
                         if (b1==1 && b2==1 && (was_b1!=b1 || was_b2!=b2)) {
                             _overlay_on = !_overlay_on;
+                            set_context_field_boolean("overlay_status", _overlay_on);
                             play_overlay_toggle_sound();
                             sider_dispatch_show_hide_events(_overlay_on);
                             handled = true;
@@ -3951,6 +3981,7 @@ DWORD direct_input_poll(void *param) {
                     BYTE b2 = *(BYTE*)(_controller_buttons + _di_overlay_toggle2.dwOfs);
                     if (b1!=0 && b2!=0 && (was_b1!=b1 || was_b2!=b2)) {
                         _overlay_on = !_overlay_on;
+                        set_context_field_boolean("overlay_status", _overlay_on);
                         play_overlay_toggle_sound();
                         sider_dispatch_show_hide_events(_overlay_on);
                         handled = true;
@@ -6471,6 +6502,8 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_refresh_kit);
     lua_setfield(L, -2, "refresh");
     lua_setfield(L, -2, "kits");
+    lua_pushboolean(L, _overlay_on);
+    lua_setfield(L, -2, "overlay_status");
 }
 
 static void push_env_table(lua_State *L, module_t *m)
@@ -8054,6 +8087,7 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
     if (code == HC_ACTION) {
         if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
             _overlay_on = !_overlay_on;
+            set_context_field_boolean("overlay_status", _overlay_on);
             play_overlay_toggle_sound();
             sider_dispatch_show_hide_events(_overlay_on);
             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
@@ -8082,6 +8116,10 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                     }
                     else if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_prev_module) {
                         sider_switch_overlay_to_prev_module();
+                    }
+                    else if (!(_block_input && _hard_block) && wParam == 0x42) // 'B'
+                    {
+                        switch_overlay_to_broadcast_server();
                     }
                     else {
                         // lua callback
